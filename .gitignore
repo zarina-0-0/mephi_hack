@@ -1,0 +1,78 @@
+# ----------------------------------------
+# macOS
+# ----------------------------------------
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Thumbnails
+._*
+
+# macOS folder settings
+*.icloud
+*.icns
+.Icon?
+.Spotlight-V100
+.Trashes
+
+# APFS / Time Machine
+.fseventsd
+.TemporaryItems
+.VolumeIcon.icns
+.com.apple.timemachine.*
+
+# ----------------------------------------
+# Python / venv
+# ----------------------------------------
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.pdb
+*.pbi
+*.pytest_cache/
+*.mypy_cache/
+*.ruff_cache/
+*.benchmarks/
+
+# Virtual environments
+venv/
+env/
+.venv/
+
+# Byte-compiled / cache
+*.egg-info/
+.eggs/
+dist/
+build/
+
+# ----------------------------------------
+# IDE and Editors
+# ----------------------------------------
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# ----------------------------------------
+# Logs
+# ----------------------------------------
+*.log
+
+# ----------------------------------------
+# Telegram bot project
+# ----------------------------------------
+*.session
+*.session-journal
+*.db
+*.sqlite
+*.sqlite3
+
+# JSON updates / runtime files
+*.json
+
+# ----------------------------------------
+# Personal config
+# ----------------------------------------
+config.py
+
