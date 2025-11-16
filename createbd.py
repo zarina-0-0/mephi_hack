@@ -1,6 +1,4 @@
-# В createbd.py
 def create_tables(cur):
-    # Таблица НКО
     cur.execute('''
         CREATE TABLE IF NOT EXISTS nko_info (
             nko_id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -10,7 +8,6 @@ def create_tables(cur):
         )
     ''')
 
-    # Таблица постов
     cur.execute('''
         CREATE TABLE IF NOT EXISTS posts (
             post_id INTEGER PRIMARY KEY AUTOINCREMENT,
