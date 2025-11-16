@@ -428,9 +428,9 @@ async def set_name_text(message: types.Message, state: FSMContext):
 async def ask_task_type(msg_obj, state: FSMContext):
     keyboard = make_inline_keyboard(
         [
-            "📝 Создание текста",
-            "👩‍🎨 Создание картинки",
-            "💡 Создание контент плана"
+            "Создание текста",
+            "Создание картинки",
+            "Создание контент плана"
         ],
         prefix="task_type"
     )
@@ -529,9 +529,20 @@ async def set_image_description(message: types.Message, state: FSMContext):
 
 
 # --- выбор стиля картинки ---
+# --- выбор стиля картинки ---
 async def ask_image_style(msg_obj, state: FSMContext):
     keyboard = make_inline_keyboard(
-        ["Реалистичный", "Рисованный", "Мультик", "Комикс", "Ввести свой"],
+        [
+            "Реализм",
+            "Импрессионизм",
+            "Сюрреализм",
+            "Киношный",
+            "Фэнтези",
+            "Минимализм",
+            "Масляная живопись",
+            "Акварель",
+            "Ввести свой"
+        ],
         prefix="image_style"
     )
 
@@ -549,12 +560,30 @@ async def set_image_style(callback: types.CallbackQuery, state: FSMContext):
     style = callback.data.split(":", 1)[1]
 
     if style == "Ввести свой":
-        await callback.message.answer("Введите свой вариант стиля:")
+        await callback.message.answer("✏️ Введите свой вариант стиля:")
         await state.set_state(ContentGen.image_style)
     else:
         await state.update_data(image_style=style)
+        # Показываем пользователю выбранный стиль без технического описания
+        simple_style = style.split(" / ")[0]  # Берем только русскую часть
+        await callback.message.edit_text(f"🎨 Стиль: {simple_style}")
         await ask_color_scheme(callback.message, state)
 
+
+@dp.callback_query(PrefixFilter("color_scheme:"))
+async def set_color_scheme(callback: types.CallbackQuery, state: FSMContext):
+    color_scheme = callback.data.split(":", 1)[1]
+
+    if color_scheme == "Пропустить":
+        await state.update_data(image_color_scheme=None)
+        await callback.message.edit_text("🎨 Цветовая гамма не указана")
+    else:
+        await state.update_data(image_color_scheme=color_scheme)
+        # Показываем пользователю только русскую часть
+        simple_colors = color_scheme.split(" / ")[0]
+        await callback.message.edit_text(f"🎨 Цветовая гамма: {simple_colors}")
+
+    await generate_image_prompt(callback.message, state)
 
 # --- кастомный стиля ---
 @dp.message(ContentGen.image_style)
@@ -566,7 +595,15 @@ async def set_custom_image_style(message: types.Message, state: FSMContext):
 # --- выбор цветовой гаммы ---
 async def ask_color_scheme(msg_obj, state: FSMContext):
     keyboard = make_inline_keyboard(
-        ["Яркая", "Пастельная", "Тёмная", "Пропустить"],
+        [
+            "Теплые тона",
+            "Холодные тона",
+            "Пастельные цвета",
+            "Монохром",
+            "Приглушенные цвета",
+            "Контрастные",
+            "Пропустить"
+        ],
         prefix="color_scheme"
     )
 
@@ -579,21 +616,6 @@ async def ask_color_scheme(msg_obj, state: FSMContext):
     await state.set_state(ContentGen.image_color_scheme)
 
 
-# --- выбор цветовой гаммы ---
-@dp.callback_query(PrefixFilter("color_scheme:"))
-async def set_color_scheme(callback: types.CallbackQuery, state: FSMContext):
-    color_scheme = callback.data.split(":", 1)[1]
-
-    if color_scheme == "Пропустить":
-        await state.update_data(image_color_scheme=None)
-        await callback.message.edit_text("Цветовая гамма не указана")
-    else:
-        await state.update_data(image_color_scheme=color_scheme)
-        await callback.message.edit_text(f"Цветовая гамма: {color_scheme}")
-
-    await generate_image_prompt(callback.message, state)
-
-
 # --- промпт для картинки ---
 async def generate_image_prompt(msg_obj, state: FSMContext):
     data = await state.get_data()
@@ -602,39 +624,73 @@ async def generate_image_prompt(msg_obj, state: FSMContext):
 
     if data.get('post_for_image'):
         prompt_parts.append(f"Иллюстрация для поста: {data['post_for_image']}")
-
-    if data.get('image_description'):
+    elif data.get('image_description'):
         prompt_parts.append(data['image_description'])
+    else:
+        prompt_parts.append("Креативная иллюстрация для социальных сетей")
 
+    # Стиль
     if data.get('image_style'):
         style_mapping = {
-            "Реалистичный": "фотореалистичный стиль",
-            "Рисованный": "живописный стиль, масляная живопись",
-            "Мультик": "мультипликационный стиль",
-            "Комикс": "стиль комикса"
+            "Реализм / Realism": "фотореалистичный стиль, гиперреализм, профессиональная фотография",
+            "Импрессионизм / Impressionism": "импрессионизм, живописные мазки, игра света",
+            "Сюрреализм / Surrealism": "сюрреализм, фантастические элементы, сновидческая атмосфера",
+            "Киношный / Cinematic": "кинематографичный стиль, драматичное освещение, кадр из фильма",
+            "Фэнтези / Fantasy": "фэнтези, волшебная атмосфера, мифические элементы",
+            "Минимализм / Minimalism": "минимализм, чистые линии, простота композиции",
+            "Масляная живопись / Oil painting": "масляная живопись, текстуры масла, классическая техника",
+            "Акварель / Watercolor": "акварельная техника, прозрачные слои, мягкие переходы"
         }
         style = style_mapping.get(data['image_style'], data['image_style'])
         prompt_parts.append(f"Стиль: {style}")
+    else:
+        prompt_parts.append("Стиль: профессиональный цифровой арт")
 
     if data.get('image_color_scheme'):
         color_mapping = {
-            "Яркая": "яркие насыщенные цвета",
-            "Пастельная": "пастельные тона",
-            "Тёмная": "тёмная цветовая палитра",
+            "Теплые тона / Warm tones": "теплые тона, золотистые оттенки, уютная палитра",
+            "Холодные тона / Cool tones": "холодные тона, сине-зеленая палитра, свежие цвета",
+            "Пастельные цвета / Pastel colors": "пастельные цвета, мягкие пастельные тона, нежные оттенки",
+            "Монохром / Monochrome": "монохромная палитра, черно-белое, оттенки одного цвета",
+            "Приглушенные цвета / Muted colors": "приглушенные цвета, мягкая насыщенность, спокойная палитра",
+            "Контрастные / High contrast": "высокий контраст, яркие акценты, динамичная цветовая палитра"
         }
         colors = color_mapping.get(data['image_color_scheme'], data['image_color_scheme'])
-        prompt_parts.append(f"Цвета: {colors}")
+        prompt_parts.append(f"Цветовая палитра: {colors}")
+    else:
+        prompt_parts.append("Цветовая палитра: сбалансированная гармоничная")
 
     image_prompt = ", ".join(prompt_parts)
 
-    await state.update_data(image_prompt=image_prompt)
+    technical_specs = """
+Технические требования:
+- Высокое качество, детализированное изображение
+- Профессиональное освещение и композиция
+- Резкость и четкость
+- Гармоничное цветовое сочетание
+- Сбалансированная перспектива
 
-    text = f"**Созданный запрос для графической нейросети:**\n\n`{image_prompt}`\n\nЧто вы хотите сделать дальше?"
+Дополнительные параметры:
+- Разрешение: 4K
+- Глубина резкости: профессиональная
+- Текстуры: реалистичные
+- Атмосфера: соответствующая стилю
+
+Нежелательные элементы: размытость, искажения, низкое качество, дисгармония в цветах
+"""
+
+    full_prompt = image_prompt + technical_specs
+    await state.update_data(image_prompt=full_prompt)
+
+    # показываем только красивую версию
+    user_friendly_prompt = image_prompt
+
+    text = f"**Созданный запрос для графической нейросети:**\n\n`{user_friendly_prompt}`\n\nЧто вы хотите сделать дальше?"
 
     keyboard = types.InlineKeyboardMarkup(
         inline_keyboard=[
-            [types.InlineKeyboardButton(text="Отредактировать запрос", callback_data="edit_image_prompt")],
-            [types.InlineKeyboardButton(text="Отправить на создание", callback_data="generate_image")]
+            [types.InlineKeyboardButton(text="✏️ Отредактировать запрос", callback_data="edit_image_prompt")],
+            [types.InlineKeyboardButton(text="🤖 Отправить на создание", callback_data="generate_image")]
         ]
     )
 
@@ -644,38 +700,6 @@ async def generate_image_prompt(msg_obj, state: FSMContext):
         await msg_obj.message.edit_text(text, reply_markup=keyboard, parse_mode=ParseMode.MARKDOWN)
 
     await state.set_state(ContentGen.image_prompt)
-
-
-# --- редактирование промпта для картинки ---
-@dp.callback_query(PrefixFilter("edit_image_prompt"))
-async def edit_image_prompt(callback: types.CallbackQuery, state: FSMContext):
-    data = await state.get_data()
-    current_prompt = data.get('image_prompt', '')
-
-    await callback.message.answer(
-        f"Текущий запрос:\n\n`{current_prompt}`\n\nВведите исправленный запрос:",
-        parse_mode=ParseMode.MARKDOWN
-    )
-    await state.set_state(ContentGen.image_prompt_edit)
-
-
-# --- получение отредактированного промпта ---
-@dp.message(ContentGen.image_prompt_edit)
-async def set_edited_image_prompt(message: types.Message, state: FSMContext):
-    edited_prompt = message.text.strip()
-    await state.update_data(image_prompt=edited_prompt)
-
-    text = f"**Обновленный запрос для графической нейросети:**\n\n`{edited_prompt}`\n\nЧто вы хотите сделать дальше?"
-
-    keyboard = types.InlineKeyboardMarkup(
-        inline_keyboard=[
-            [types.InlineKeyboardButton(text="Отредактировать запрос", callback_data="edit_image_prompt")],
-            [types.InlineKeyboardButton(text="Отправить на создание", callback_data="generate_image")]
-        ]
-    )
-
-    await message.answer(text, reply_markup=keyboard, parse_mode=ParseMode.MARKDOWN)
-    await state.set_state(ContentGen.image_prompt)  # Возвращаемся к основному состоянию
 
 
 # --- генерация картинки ---
@@ -708,7 +732,7 @@ async def start_image_generation(callback: types.CallbackQuery, state: FSMContex
             keyboard = types.InlineKeyboardMarkup(
                 inline_keyboard=[
                     [types.InlineKeyboardButton(text="✨Создать еще", callback_data="generate_another_image")],
-                    [types.InlineKeyboardButton(text="Изменить запрос", callback_data="edit_image_prompt")],
+                    [types.InlineKeyboardButton(text="✏️ Изменить запрос", callback_data="edit_image_prompt")],
                     [types.InlineKeyboardButton(text="Сохранить (если выбирали нко)", callback_data="save_image")]
                 ]
             )
@@ -727,7 +751,7 @@ async def start_image_generation(callback: types.CallbackQuery, state: FSMContex
 
             keyboard = types.InlineKeyboardMarkup(
                 inline_keyboard=[
-                    [types.InlineKeyboardButton(text="Отредактировать запрос", callback_data="edit_image_prompt")],
+                    [types.InlineKeyboardButton(text="✏️ Отредактировать запрос", callback_data="edit_image_prompt")],
                     [types.InlineKeyboardButton(text="🔄 Попробовать снова", callback_data="generate_image")]
                 ]
             )
