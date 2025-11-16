@@ -9,7 +9,7 @@ def api_get_result(text):
     )
 
     completion = client.chat.completions.create(
-      model="google/gemini-2.0-flash-exp:free",
+      model="openai/gpt-oss-20b:free",
       messages=[
         {
           "role": "user",
